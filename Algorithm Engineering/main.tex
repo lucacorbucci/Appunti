@@ -1,0 +1,95 @@
+\documentclass[14pt]{extreport}
+\usepackage{listings}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{qtree}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage {tikz}
+\usetikzlibrary {positioning}
+%\usepackage {xcolor}
+\definecolor {processblue}{cmyk}{0.96,0,0,0}
+
+\title{Algorithm Engineering}
+
+\author{Luca Corbucci}
+
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\chapter{Lezione 1}
+
+\section{Definizione di algoritmo}
+
+Nel libro "The Art of Computer Programming" Donald Knuth definisce un algoritmo come "una procedura finita, definita, effettiva con alcuni output". Nel dettaglio:
+\begin{itemize}
+    \item Finita: l'algoritmo deve terminare sempre dopo un numero ragionevole di passaggi. Il termine "ragionevole" (rispetto alla difficoltà del problema) è legato all'efficienza dell'algoritmo;
+    \item Definito: ogni step dell'algoritmo deve avere un significato preciso e non ambiguo, se lo legge un'altra persona non deve avere una "interpretazione" diversa dalla nostra;
+    \item Effettivo: tutte le operazioni effettuate nell'algoritmo devono essere abbastanza semplici da poter essere eseguite anche con carta e penna.
+\end{itemize}
+
+\section{Un nuovo modello}
+
+Un algoritmo va analizzato per capire il tempo e lo spazio necessario per la sua esecuzione, il modello basilare che si è considerato fino a qualche anno fa è il "RAM Model" (1 CPU + 1 Memoria) in cui ogni accesso alla memoria costa $O(1)$ e il tempo necessario $T(N)$ lo calcoliamo considerando il numero di operazioni che vengono svolte dall'algoritmo. Spazio e tempo dipendono dalla $n$ in input, maggiore è n e più aumentano gli step necessari per l'esecuzione dell'algoritmo (e quindi il tempo), allo stesso modo aumentano anche le celle di memoria occupate durante l'esecuzione dell'algoritmo (e quindi lo spazio necessario).
+Dati due algoritmi analizzati con il modello RAM è possibile confrontarli per capire quale dei due è migliore dal punto di vista del tempo necessario all'esecuzione.
+
+Il modello RAM attualmente non è più utilizzato (se non in teoria) e si è passati ad un modello più complicato in cui abbiamo più di una CPU e una gerarchia di memoria. L'accesso alla memoria ha un costo differente a seconda di dove si trova la memoria all'interno della gerarchia, alla cache si accede in poco tempo (nanosecondi), al disco si accede in un tempo che è nell'ordine dei millisecondi. 
+Per risolvere questo problema di "I/O Bottleneck" o si cerca di trovare soluzioni hardware o si migliorano gli algoritmi, spesso migliorando gli algoritmi si ottiene una soluzione migliore rispetto al miglioramento dell'hardware.
+Ad esempio, consideriamo 3 algoritmi con 3 costi differenti in termini di tempo necessario per l'esecuzione:
+\begin{itemize}
+    \item $C_1(n) = n$: se abbiamo un tempo massimo $t$ e ogni operazione di $I/O$ costa c, i dati su cui possiamo lavorare sono al massimo $n*c = t$ ovvero $n = \frac{t}{c}$. Se aumentiamo il tempo di k, la quantità di dati scala perfettamente di un fattore k. $n = \frac{t*k}{c}$.
+    \item $C_2(n) = n^2$: se abbiamo un tempo massimo $t$ e ogni operazione di $I/O$ costa c, i dati su cui possiamo lavorare sono al massimo $n^2*c = t$ ovvero $n = \sqrt{\frac{t}{c}}$. Se aumentiamo il tempo di k, la quantità di dati diventa. $n = \sqrt{\frac{t*k}{c}}$.
+    \item $C_3(n) = 2^n$: se abbiamo un tempo massimo $t$ e ogni operazione di $I/O$ costa c, i dati su cui possiamo lavorare sono al massimo $2^n*c = t$ ovvero $n = log(\frac{t}{c})$. Se miglioriamo l'hardware e il tempo aumenta di k, la quantità di dati non scala. $n = log(\frac{t*k}{c})$.
+\end{itemize}
+
+Quindi il miglioramento dell'hardware non sempre porta un miglioramento in termini di tempo necessario per l'esecuzione degli algoritmi e molto spesso è preferibile avere un algoritmo migliore.
+
+\section{Un primo problema: sommare gli elementi di un array}
+
+Consideriamo il problema di dover sommare tutti gli n elementi di un array.
+Banalmente possiamo scorrere l'array e sommare in una variabile i vari elementi, eseguiamo n somme.
+Possiamo generalizzare questo approccio considerando un modo differente di accedere agli elementi dell'array, consideriamo infatti due parametri b = dimensione del blocco logico dell'array tale che per ogni blocco $[0,n/b]$ abbiamo che il blocco j comprende gli elementi $A_j = A[j*b+1,(j+1)*b]$ e s = numero di salti da fare verso destra una volta letto un elemento dell'array, s deve essere coprimo con $n/b$ perchè altrimenti andiamo a vedere sempre gli stessi blocchi. Otteniamo un modello $A_{s,b}$ per l'accesso ai dati dell'array, indipendentemente dai parametri s e b, da un punto di vista computazionale, tutti l'algoritmo ha sempre lo stesso costo perchè leggiamo sempre n interi, la differenza ce l'abbiamo in quanto ad efficienza se la dimensione n dell'array cresce perchè quando cresce n ed aumentano i dati da sommare, questi saranno distribuiti su tanti livelli di memoria e quindi avremo un costo maggiore per accedere ai vari livelli. Se ad esempio abbiamo D dischi e in ogni disco vogliamo accedere ad una pagina di memoria di dimensione B allora leggeremo un totale di $D*B$ elementi provenienti da D dischi differenti.
+Per migliorare l'efficienza dell'algoritmo nel momento in cui si accede ai dati in memoria quindi devono essere sfruttate principalmente due feature:
+\begin{itemize}
+\item Località spaziale: se accedo il blocco I è probabile che poi accederò anche il blocco I+1; 
+\item Località temporale: se ora accedo ad un certo blocco, è probabile che lo accederò di nuovo a breve.
+\end{itemize}
+
+Analizziamo l'algoritmo $A_{s,b}$ considerando un array di n elementi, dei blocchi logici nell'array di b elementi e delle pagine di memoria grandi B.
+\begin{itemize}
+\item Consideriamo $A_{1,1}$ quindi abbiamo pagine logiche grandi 1 elemento e saltiamo ogni volta di 1, quindi in pratica scorriamo l'array. L'algoritmo svolge $\frac{n}{B}$ operazioni di I/O.
+\item Prendiamo il caso in cui $b<B$ e s = 2 ovvero ogni volta saltiamo un elemento del blocco b. Se ad esempio abbiamo b=2 e B=4 vuol dire che ogni volta consideriamo solamente due elementi del blocco B quindi poi è necessario caricare due volte il blocco in memoria per accedere di nuovo agli elementi che non abbiamo ancora visto.
+Quindi le operazioni di I/O diventano in questo caso $\frac{2*n}{B}$.
+\end{itemize}
+Generalizzando questo ragionamento possiamo dire che il costo delle operazioni di I/O dipende dalla scelta di s e quindi sarà $\frac{s*n}{B}$.
+
+Consideriamo ora il costo complessivo dell'esecuzione dell'algoritmo andando a considerare lo step di computazione e lo step di accesso alla memoria.
+Consideriamo che lo step di accesso alla memoria è necessario perchè abbiamo una memoria interna di dimensione M ma i dati che vogliamo prendere in considerazione sono $(1+\epsilon )*M$ ovvero rimangono fuori dalla memoria interna $\epsilon * m$ elementi.
+Consideriamo inoltre la probabilità di un fault di I/O ovvero la probabilità di dover andare in memoria per prendere i dati necessari:
+\begin{itemize}
+\item Se $p(\epsilon) = 1$ accedo sempre al disco
+\item Se $p(\epsilon) = 0$ non accedo mai al disco
+\item Se $p(\epsilon) =\frac{\epsilon}{1+\epsilon}$ allora l'accesso al disco è completamente random. 
+\end{itemize}
+Ogni step dell'algoritmo ha un costo di:
+\begin{equation}
+1*P(Computational Step) + t_m * P(Memory access step)
+\end{equation}
+Dove con probabilità A eseguo lo step di memory access e con probabilità (1-A) l'altro tipo di step.
+Dove $t_m$ viene calcolato come la somma della probabilità di un accesso in memoria interna e un accesso al disco:
+\begin{equation}
+T_m = 1*(1-p(\epsilon)) + c*p(\epsilon)
+\end{equation}
+Dove c è il costo dell'accesso al disco.
+
+Anche se sfruttiamo i principi di località, gli accessi al disco hanno un costo molto alto e comportano dei problemi perchè vanno a rallentare l'esecuzione dell'algoritmo. Aumentando la N questo problema si nota ancora di più perchè aumentano i livelli di memoria in cui vengono posizionati i vari elementi dell'array.
+
+\chapter{Lezione 2: Maximum Sub-Array Sum}
+
+\end{document}
